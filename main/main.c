@@ -5,6 +5,7 @@
  */
 
 #include <inttypes.h>
+#include <sprites.h>
 #include <ssd1306.h>
 #include <stdio.h>
 #include "display.h"
@@ -16,14 +17,13 @@
 #include "sdkconfig.h"
 
 void app_main(void) {
-    printf("Hello world!\n");
-
     Display display;
 
     display_init(&display);
 
-    display_show_status(&display, "Line 1", "Line 2", "Line 3", "Line 4", "Line 5", "Line 6",
-                        "Line 7");
+    display_show_status(&display, "0123456789abcdef", "0123456789abcdef", "0123456789abcdef",
+                        "0123456789abcdef", "0123456789abcdef", "0123456789abcdef",
+                        "0123456789abcdef", "0123456789abcdef");
 
     /* Print chip information */
     esp_chip_info_t chip_info;
@@ -52,6 +52,10 @@ void app_main(void) {
         printf("Restarting in %d seconds...\n", i);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
+    // display_show_status(&display, HappyFace[0], HappyFace[1], HappyFace[2], HappyFace[3],
+    //                     HappyFace[4], HappyFace[5], HappyFace[6], HappyFace[7]);
+    display_matrix_content(&display, HappyFace);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
     printf("Restarting now.\n");
     fflush(stdout);
     esp_restart();

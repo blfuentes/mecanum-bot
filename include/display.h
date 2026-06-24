@@ -59,8 +59,15 @@ bool display_update(Display* display);
  * @param line6 Sixth status line to render.
  * @param line7 Seventh status line to render.
  */
-void display_show_status(Display* display, const char* line1, const char* line2, const char* line3,
-                         const char* line4, const char* line5, const char* line6,
+void display_show_status(Display* display, const char* line0, const char* line1, const char* line2,
+                         const char* line3, const char* line4, const char* line5, const char* line6,
                          const char* line7);
+
+/**
+ * @brief Display sprites on the OLED.
+ * @param display Pointer to initialized display state.
+ * @param content Matrix content to render.
+ */
+void display_matrix_content(Display* display, const char* content[]);
 
 #endif  // DISPLAY_H__
