@@ -79,3 +79,6 @@ Desktop.ini
 
 # Ignore .env file containing sensitive information
 .env
+
+# Espressif
+components/
