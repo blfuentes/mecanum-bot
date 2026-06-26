@@ -52,6 +52,11 @@ void app_main(void) {
 
     for (int i = 10; i >= 0; i--) {
         printf("Restarting in %d seconds...\n", i);
+        if (i % 2 == 0) {
+            display_matrix_content(&display, LookLeft);
+        } else {
+            display_matrix_content(&display, LookRight);
+        }
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
     // display_show_status(&display, HappyFace[0], HappyFace[1], HappyFace[2], HappyFace[3],

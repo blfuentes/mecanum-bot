@@ -2,9 +2,12 @@
   "idf.currentSetup": "D:\\esp\\v6.0.1\\esp-idf",
   "idf.customExtraVars": {},
   "clangd.path": "C:\\Espressif\\tools\\esp-clang\\esp-20.1.1_20250829\\esp-clang\\bin\\clangd.exe",
+  "clang-format.executable": "C:\\Espressif\\tools\\esp-clang\\esp-20.1.1_20250829\\esp-clang\\bin\\clang-format.exe",
   "clangd.arguments": [
     "--background-index",
     "--query-driver=**",
     "--compile-commands-dir=d:\\dev\\mecanum-bot\\Quad\\build"
-  ]
+  ],
+  "idf.flashType": "UART",
+  "idf.portWin": "COM4"
 }

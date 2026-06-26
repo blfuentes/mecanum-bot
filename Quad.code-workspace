@@ -1,0 +1,28 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "Libnow"
+		},
+		{
+			"path": "Control"
+		},
+		{
+			"path": "Quad"
+		},
+		{
+			"path": ".vscode"
+		}
+	],
+	"settings": {
+		"C_Cpp.clang_format_path": "C:\\Espressif\\tools\\esp-clang\\esp-20.1.1_20250829\\esp-clang\\bin\\clang-format.exe",
+		"[c]": {
+			"editor.defaultFormatter": "ms-vscode.cpptools"
+		},
+		"[cpp]": {
+			"editor.defaultFormatter": "ms-vscode.cpptools"
+		}
+	}
+}

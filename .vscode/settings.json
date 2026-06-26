@@ -15,7 +15,15 @@
     "--compile-commands-dir=d:\\dev\\mecanum-bot\\build"
   ],
   "clang-format.executable": "C:\\Espressif\\tools\\esp-clang\\esp-20.1.1_20250829\\esp-clang\\bin\\clang-format.exe",
+  "clang-format.style": "file",
   "C_Cpp.clang_format_path": "C:\\Espressif\\tools\\esp-clang\\esp-20.1.1_20250829\\esp-clang\\bin\\clang-format.exe",
+  "C_Cpp.formatting": "disabled",
+  "[c]": {
+    "editor.defaultFormatter": "xaver.clang-format"
+  },
+  "[cpp]": {
+    "editor.defaultFormatter": "xaver.clang-format"
+  },
   "idf.portWin": "COM4",
   "idf.flashType": "UART",
   "cmake.sourceDirectory": "D:/dev/mecanum-bot/Quad"
