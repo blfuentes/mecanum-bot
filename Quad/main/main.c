@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: CC0-1.0
  */
 
+#include <esp_log.h>
 #include <inttypes.h>
 #include <sprites.h>
 #include <ssd1306.h>
@@ -16,54 +17,92 @@
 #include "freertos/task.h"
 #include "sdkconfig.h"
 
+#include <esp_now.h>
 #include <libnow.h>
+
+static const char* LIBNOW_TAG  = "LIBNOW";
+static const char* MESSAGE_TAG = "MESSAGE";
+
+message_control_status last_msg = {.left_control.x_value  = -1,
+                                   .left_control.y_value  = -1,
+                                   .left_control.pressed  = false,
+                                   .right_control.x_value = -1,
+                                   .right_control.y_value = -1,
+                                   .right_control.pressed = false};
+
+bool messageChanged(const message_control_status msg) {
+    return (last_msg.left_control.x_value != msg.left_control.x_value ||
+            last_msg.left_control.y_value != msg.left_control.y_value ||
+            last_msg.left_control.pressed != msg.left_control.pressed ||
+            last_msg.right_control.x_value != msg.right_control.x_value ||
+            last_msg.right_control.y_value != msg.right_control.y_value ||
+            last_msg.right_control.pressed != msg.right_control.pressed);
+}
+
+static void recvcb(const esp_now_recv_info_t* esp_now_info, const uint8_t* data, int data_len) {
+    message_control_status msg = *(message_control_status*)&data[0];
+    if (messageChanged(msg)) {
+        ESP_LOGI(MESSAGE_TAG, "Message changed. LeftX: %d , LeftY: %d, RightX: %d, RightY:  %d",
+                 msg.left_control.x_value, msg.left_control.y_value, msg.right_control.x_value,
+                 msg.right_control.y_value);
+        last_msg = msg;  // Update last message
+        // doWhenMove(msg);
+    }
+}
 
 void app_main(void) {
     Display display;
 
+    // Initialize LibNow
+    ESP_LOGI(LIBNOW_TAG, "Initializing LibNow...");
+    libnow_init();
+    libnow_addPeer(DST_MANDO);
+    esp_now_register_recv_cb(recvcb);
+    ESP_LOGI(LIBNOW_TAG, "LibNow initialized");
+
     display_init(&display);
 
-    display_show_status(&display, "0123456789abcdef", "0123456789abcdef", "0123456789abcdef",
-                        "0123456789abcdef", "0123456789abcdef", "0123456789abcdef",
-                        "0123456789abcdef", "0123456789abcdef");
+    // display_show_status(&display, "0123456789abcdef", "0123456789abcdef", "0123456789abcdef",
+    //                     "0123456789abcdef", "0123456789abcdef", "0123456789abcdef",
+    //                     "0123456789abcdef", "0123456789abcdef");
 
-    /* Print chip information */
-    esp_chip_info_t chip_info;
-    uint32_t flash_size;
-    esp_chip_info(&chip_info);
-    printf("This is %s chip with %d CPU core(s), %s%s%s%s, ", CONFIG_IDF_TARGET, chip_info.cores,
-           (chip_info.features & CHIP_FEATURE_WIFI_BGN) ? "WiFi/" : "",
-           (chip_info.features & CHIP_FEATURE_BT) ? "BT" : "",
-           (chip_info.features & CHIP_FEATURE_BLE) ? "BLE" : "",
-           (chip_info.features & CHIP_FEATURE_IEEE802154) ? ", 802.15.4 (Zigbee/Thread)" : "");
+    // /* Print chip information */
+    // esp_chip_info_t chip_info;
+    // uint32_t flash_size;
+    // esp_chip_info(&chip_info);
+    // printf("This is %s chip with %d CPU core(s), %s%s%s%s, ", CONFIG_IDF_TARGET, chip_info.cores,
+    //        (chip_info.features & CHIP_FEATURE_WIFI_BGN) ? "WiFi/" : "",
+    //        (chip_info.features & CHIP_FEATURE_BT) ? "BT" : "",
+    //        (chip_info.features & CHIP_FEATURE_BLE) ? "BLE" : "",
+    //        (chip_info.features & CHIP_FEATURE_IEEE802154) ? ", 802.15.4 (Zigbee/Thread)" : "");
 
-    unsigned major_rev = chip_info.revision / 100;
-    unsigned minor_rev = chip_info.revision % 100;
-    printf("silicon revision v%d.%d, ", major_rev, minor_rev);
-    if (esp_flash_get_size(NULL, &flash_size) != ESP_OK) {
-        printf("Get flash size failed");
-        return;
-    }
+    // unsigned major_rev = chip_info.revision / 100;
+    // unsigned minor_rev = chip_info.revision % 100;
+    // printf("silicon revision v%d.%d, ", major_rev, minor_rev);
+    // if (esp_flash_get_size(NULL, &flash_size) != ESP_OK) {
+    //     printf("Get flash size failed");
+    //     return;
+    // }
 
-    printf("%" PRIu32 "MB %s flash\n", flash_size / (uint32_t)(1024 * 1024),
-           (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
+    // printf("%" PRIu32 "MB %s flash\n", flash_size / (uint32_t)(1024 * 1024),
+    //        (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
 
-    printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
+    // printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
 
-    for (int i = 10; i >= 0; i--) {
-        printf("Restarting in %d seconds...\n", i);
-        if (i % 2 == 0) {
-            display_matrix_content(&display, LookLeft);
-        } else {
-            display_matrix_content(&display, LookRight);
-        }
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
-    // display_show_status(&display, HappyFace[0], HappyFace[1], HappyFace[2], HappyFace[3],
-    //                     HappyFace[4], HappyFace[5], HappyFace[6], HappyFace[7]);
-    display_matrix_content(&display, HappyFace);
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
-    printf("Restarting now.\n");
-    fflush(stdout);
-    esp_restart();
+    // for (int i = 10; i >= 0; i--) {
+    //     printf("Restarting in %d seconds...\n", i);
+    //     if (i % 2 == 0) {
+    //         display_matrix_content(&display, LookLeft);
+    //     } else {
+    //         display_matrix_content(&display, LookRight);
+    //     }
+    //     vTaskDelay(1000 / portTICK_PERIOD_MS);
+    // }
+    // // display_show_status(&display, HappyFace[0], HappyFace[1], HappyFace[2], HappyFace[3],
+    // //                     HappyFace[4], HappyFace[5], HappyFace[6], HappyFace[7]);
+    // display_matrix_content(&display, HappyFace);
+    // vTaskDelay(2000 / portTICK_PERIOD_MS);
+    // printf("Restarting now.\n");
+    // fflush(stdout);
+    // esp_restart();
 }

@@ -3,8 +3,14 @@
 #define __LIBNOW_H__
 
 typedef struct {
-    int left_control;
-    int right_control;
+    int x_value;
+    int y_value;
+    bool pressed;
+} message_joytick;
+
+typedef struct {
+    message_joytick left_control;
+    message_joytick right_control;
 } message_control_status;
 
 typedef enum { DST_ROBOT = 0, DST_MANDO } LibNowDst;
