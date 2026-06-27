@@ -22,6 +22,7 @@
 
 static const char* LIBNOW_TAG  = "LIBNOW";
 static const char* MESSAGE_TAG = "MESSAGE";
+Display display;
 
 message_control_status last_msg = {.left_control.x_value  = -1,
                                    .left_control.y_value  = -1,
@@ -39,6 +40,79 @@ bool messageChanged(const message_control_status msg) {
             last_msg.right_control.pressed != msg.right_control.pressed);
 }
 
+static void printFace(message_control_status data) {
+    if (data.left_control.x_value > 2000 && data.left_control.x_value < 3000 &&
+        data.left_control.y_value > 2000 && data.left_control.y_value < 3000 &&
+        data.right_control.x_value > 2000 && data.right_control.x_value < 3000 &&
+        data.right_control.y_value > 2000 && data.right_control.y_value < 3000) {
+        display_matrix_content(&display, HappyFace);
+    }
+    // - Left + Left
+    else if (data.left_control.x_value < 1000 && data.right_control.x_value < 1000) {
+        display_matrix_content(&display, LookLeftLeft);
+    }
+    // - Left + Right
+    else if (data.left_control.x_value < 1000 && data.right_control.x_value > 3000) {
+        display_matrix_content(&display, LookLeftRight);
+    }
+    // - Left + Up
+    else if (data.left_control.x_value < 1000 && data.right_control.y_value < 1000) {
+        display_matrix_content(&display, LookLeftUp);
+    }
+    // - Left + Down
+    else if (data.left_control.x_value < 1000 && data.right_control.y_value > 3000) {
+        display_matrix_content(&display, LookLeftDown);
+    }
+    // - Right + Left
+    else if (data.left_control.x_value > 3000 && data.right_control.x_value < 1000) {
+        display_matrix_content(&display, LookRightLeft);
+    }
+    // - Right + Right
+    else if (data.left_control.x_value > 3000 && data.right_control.x_value > 3000) {
+        display_matrix_content(&display, LookRightRight);
+    }
+    // - Right + Up
+    else if (data.left_control.x_value > 3000 && data.right_control.y_value < 1000) {
+        display_matrix_content(&display, LookRightUp);
+    }
+    // - Right + Down
+    else if (data.left_control.x_value > 3000 && data.right_control.y_value > 3000) {
+        display_matrix_content(&display, LookRightDown);
+    }
+    // - Up + Left
+    else if (data.left_control.y_value < 1000 && data.right_control.x_value < 1000) {
+        display_matrix_content(&display, LookUpLeft);
+    }
+    // - Up + Right
+    else if (data.left_control.y_value < 1000 && data.right_control.x_value > 3000) {
+        display_matrix_content(&display, LookUpRight);
+    }
+    // - Up + Up
+    else if (data.left_control.y_value < 1000 && data.right_control.y_value < 1000) {
+        display_matrix_content(&display, LookUpUp);
+    }
+    // - Up + Down
+    else if (data.left_control.y_value < 1000 && data.right_control.y_value > 3000) {
+        display_matrix_content(&display, LookUpDown);
+    }
+    // - Down + Left
+    else if (data.left_control.y_value > 3000 && data.right_control.x_value < 1000) {
+        display_matrix_content(&display, LookDownLeft);
+    }
+    // - Down + Right
+    else if (data.left_control.y_value > 3000 && data.right_control.x_value > 3000) {
+        display_matrix_content(&display, LookDownRight);
+    }
+    // - Down + Up
+    else if (data.left_control.y_value > 3000 && data.right_control.y_value < 1000) {
+        display_matrix_content(&display, LookDownUp);
+    }
+    // - Down + Down
+    else if (data.left_control.y_value > 3000 && data.right_control.y_value > 3000) {
+        display_matrix_content(&display, LookDownDown);
+    }
+}
+
 static void recvcb(const esp_now_recv_info_t* esp_now_info, const uint8_t* data, int data_len) {
     message_control_status msg = *(message_control_status*)&data[0];
     if (messageChanged(msg)) {
@@ -46,12 +120,11 @@ static void recvcb(const esp_now_recv_info_t* esp_now_info, const uint8_t* data,
                  msg.left_control.x_value, msg.left_control.y_value, msg.right_control.x_value,
                  msg.right_control.y_value);
         last_msg = msg;  // Update last message
-        // doWhenMove(msg);
+        printFace(msg);
     }
 }
 
 void app_main(void) {
-    Display display;
 
     // Initialize LibNow
     ESP_LOGI(LIBNOW_TAG, "Initializing LibNow...");

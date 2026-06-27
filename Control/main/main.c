@@ -14,7 +14,7 @@
 #include "libnow.h"
 
 // TASKS
-#define SENSOR_TASK_PERIOD_MS  1000
+#define SENSOR_TASK_PERIOD_MS  20
 #define SENSOR_TASK_STACK_SIZE 3072
 #define SENSOR_TASK_PRIORITY   5
 
