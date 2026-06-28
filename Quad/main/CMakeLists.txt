@@ -98,6 +98,6 @@ endif()
 idf_component_register(
 	SRCS ${app_sources}
 	INCLUDE_DIRS ${component_include_dirs}
-	REQUIRES ssd1306 spi_flash esp_timer esp_adc esp_wifi esp_netif nvs_flash esp_event esp_http_client mbedtls Libnow
+	REQUIRES ssd1306 spi_flash esp_timer esp_driver_gpio esp_driver_i2c esp_driver_ledc esp_adc esp_wifi esp_netif nvs_flash esp_event esp_http_client mbedtls Libnow
 	PRIV_REQUIRES esp_common
 )

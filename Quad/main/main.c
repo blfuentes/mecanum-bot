@@ -5,11 +5,14 @@
  */
 
 #include <esp_log.h>
+#include <esp_now.h>
 #include <inttypes.h>
+#include <libnow.h>
 #include <sprites.h>
 #include <ssd1306.h>
 #include <stdio.h>
 #include "display.h"
+#include "driver/ledc.h"
 #include "esp_chip_info.h"
 #include "esp_flash.h"
 #include "esp_system.h"
@@ -17,12 +20,16 @@
 #include "freertos/task.h"
 #include "sdkconfig.h"
 
-#include <esp_now.h>
-#include <libnow.h>
-
 static const char* LIBNOW_TAG  = "LIBNOW";
 static const char* MESSAGE_TAG = "MESSAGE";
+static const char* SERVO_TAG   = "SERVO";
+
+static const int CONTROL_THRESHOLD = 50;
+
+// SERVO
+
 Display display;
+float angle = 100.0f;
 
 message_control_status last_msg = {.left_control.x_value  = -1,
                                    .left_control.y_value  = -1,
@@ -32,12 +39,12 @@ message_control_status last_msg = {.left_control.x_value  = -1,
                                    .right_control.pressed = false};
 
 bool messageChanged(const message_control_status msg) {
-    return (last_msg.left_control.x_value != msg.left_control.x_value ||
-            last_msg.left_control.y_value != msg.left_control.y_value ||
-            last_msg.left_control.pressed != msg.left_control.pressed ||
-            last_msg.right_control.x_value != msg.right_control.x_value ||
-            last_msg.right_control.y_value != msg.right_control.y_value ||
-            last_msg.right_control.pressed != msg.right_control.pressed);
+    return (abs(last_msg.left_control.x_value - msg.left_control.x_value) > CONTROL_THRESHOLD ||
+            abs(last_msg.left_control.y_value - msg.left_control.y_value) > CONTROL_THRESHOLD ||
+            abs(last_msg.left_control.pressed - msg.left_control.pressed) > CONTROL_THRESHOLD ||
+            abs(last_msg.right_control.x_value - msg.right_control.x_value) > CONTROL_THRESHOLD ||
+            abs(last_msg.right_control.y_value - msg.right_control.y_value) > CONTROL_THRESHOLD ||
+            abs(last_msg.right_control.pressed - msg.right_control.pressed) > CONTROL_THRESHOLD);
 }
 
 static void printFace(message_control_status data) {
@@ -134,6 +141,8 @@ void app_main(void) {
     ESP_LOGI(LIBNOW_TAG, "LibNow initialized");
 
     display_init(&display);
+
+    // Servo config
 
     // display_show_status(&display, "0123456789abcdef", "0123456789abcdef", "0123456789abcdef",
     //                     "0123456789abcdef", "0123456789abcdef", "0123456789abcdef",
