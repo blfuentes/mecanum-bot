@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: CC0-1.0
  */
 
+#include <driver/gpio.h>
 #include <esp_log.h>
 #include <esp_now.h>
 #include <inttypes.h>
@@ -27,6 +28,29 @@ static const char* SERVO_TAG   = "SERVO";
 static const int CONTROL_THRESHOLD = 50;
 
 // SERVO
+#define LEDC_TIMER     LEDC_TIMER_0
+#define LEDC_MODE      LEDC_LOW_SPEED_MODE
+#define LEDC_OUTPUT_IO (GPIO_NUM_8)
+#define LEDC_CHANNEL   LEDC_CHANNEL_0
+#define LEDC_DUTY_RES  LEDC_TIMER_13_BIT
+
+// 50 Hz servo frame: 20 ms period
+// Approximate pulse widths:
+// 1.0 ms -> full reverse
+// 1.5 ms -> neutral
+// 2.0 ms -> full forward
+#define LEDC_DUTY_MIN     (410)  // ~1.0 ms
+#define LEDC_DUTY_NEUTRAL (614)  // ~1.5 ms
+#define LEDC_DUTY_MAX     (819)  // ~2.0 ms
+#define LEDC_DUTY         LEDC_DUTY_NEUTRAL
+
+#if CONFIG_PM_ENABLE
+#define LEDC_CLK_SRC   LEDC_USE_RC_FAST_CLK
+#define LEDC_FREQUENCY (50)
+#else
+#define LEDC_CLK_SRC   LEDC_AUTO_CLK
+#define LEDC_FREQUENCY (50)
+#endif
 
 Display display;
 float angle = 100.0f;
@@ -131,7 +155,68 @@ static void recvcb(const esp_now_recv_info_t* esp_now_info, const uint8_t* data,
     }
 }
 
+static void example_ledc_init(void) {
+    // Prepare and then apply the LEDC PWM timer configuration
+    ledc_timer_config_t ledc_timer = {
+        .speed_mode      = LEDC_MODE,
+        .duty_resolution = LEDC_DUTY_RES,
+        .timer_num       = LEDC_TIMER,
+        .freq_hz         = LEDC_FREQUENCY,  // Set output frequency at 4 kHz
+        .clk_cfg         = LEDC_CLK_SRC,
+    };
+    ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer));
+
+    // Prepare and then apply the LEDC PWM channel configuration
+    ledc_channel_config_t ledc_channel = {
+        .speed_mode = LEDC_MODE,
+        .channel    = LEDC_CHANNEL,
+        .timer_sel  = LEDC_TIMER,
+        .gpio_num   = LEDC_OUTPUT_IO,
+        .duty       = LEDC_DUTY,  // Set duty to 50%
+        .hpoint     = 0,
+#if CONFIG_PM_ENABLE
+        .sleep_mode = LEDC_SLEEP_MODE_KEEP_ALIVE,
+#endif
+    };
+    ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
+}
+
+static void servo_drive_task(void* arg) {
+    // SG90 360° continuous rotation:
+    //   duty < LEDC_DUTY_NEUTRAL  -> spins in reverse
+    //   duty = LEDC_DUTY_NEUTRAL  -> STOP (dead band ~1.5 ms)
+    //   duty > LEDC_DUTY_NEUTRAL  -> spins forward
+    // Set a fixed value above neutral for continuous forward motion.
+    // LEDC_DUTY_MAX (~2.0 ms) = full speed forward
+    const int duty = LEDC_DUTY_MAX;
+
+    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, duty));
+    ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
+
+    // Nothing more to do — hold this duty forever.
+    while (1) {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+
 void app_main(void) {
+
+    // Servo config
+#if CONFIG_PM_ENABLE
+    esp_pm_config_t pm_config = {.max_freq_mhz = CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ,
+                                 .min_freq_mhz = CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ,
+#if CONFIG_FREERTOS_USE_TICKLESS_IDLE
+                                 .light_sleep_enable = true
+#endif
+    };
+    ESP_ERROR_CHECK(esp_pm_configure(&pm_config));
+#endif
+    // Set the LEDC peripheral configuration
+    example_ledc_init();
+    // Set duty to 50%
+    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY));
+    // Update duty to apply the new value
+    ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
 
     // Initialize LibNow
     ESP_LOGI(LIBNOW_TAG, "Initializing LibNow...");
@@ -142,7 +227,7 @@ void app_main(void) {
 
     display_init(&display);
 
-    // Servo config
+    xTaskCreatePinnedToCore(servo_drive_task, "servo_drive", 4096, NULL, 5, NULL, 0);
 
     // display_show_status(&display, "0123456789abcdef", "0123456789abcdef", "0123456789abcdef",
     //                     "0123456789abcdef", "0123456789abcdef", "0123456789abcdef",
