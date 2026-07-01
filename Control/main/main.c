@@ -18,12 +18,28 @@
 #define SENSOR_TASK_STACK_SIZE 3072
 #define SENSOR_TASK_PRIORITY   5
 
-static const char* MAINT_TAG  = "CONTROL";
-static const char* LIBNOW_TAG = "LIBNOW";
+static const char* MAINT_TAG       = "CONTROL";
+static const char* LIBNOW_TAG      = "LIBNOW";
+static const int CONTROL_THRESHOLD = 50;
 
 typedef struct {
     ControlData data;
 } ControlMessage;
+
+static bool should_send_control_message(const message_control_status* previous,
+                                        const message_control_status* current) {
+    if (previous == NULL || current == NULL) {
+        return true;
+    }
+
+    return (
+        abs(previous->left_control.x_value - current->left_control.x_value) > CONTROL_THRESHOLD ||
+        abs(previous->left_control.y_value - current->left_control.y_value) > CONTROL_THRESHOLD ||
+        previous->left_control.pressed != current->left_control.pressed ||
+        abs(previous->right_control.x_value - current->right_control.x_value) > CONTROL_THRESHOLD ||
+        abs(previous->right_control.y_value - current->right_control.y_value) > CONTROL_THRESHOLD ||
+        previous->right_control.pressed != current->right_control.pressed);
+}
 
 // JOYSTICK
 adc_channel_t JOYSTICK_LEFT_CHANNEL_X = ADC_CHANNEL_0;  // GPIO00
@@ -41,7 +57,9 @@ gpio_num_t JOYSTICK_RIGHT_BUTTON_PIN   = GPIO_NUM_5;
 static void control_task(void* arg) {
     (void)arg;
     ControlMessage msg;
-    message_control_status lib_msg = {0};
+    message_control_status lib_msg   = {0};
+    message_control_status last_sent = {0};
+    bool has_last_sent               = false;
     // ESP_LOGI(MAINT_TAG, "Control task started");
 
     for (;;) {
@@ -59,7 +77,12 @@ static void control_task(void* arg) {
         lib_msg.right_control.x_value = msg.data.right_control.x_level;
         lib_msg.right_control.y_value = msg.data.right_control.y_level;
         lib_msg.right_control.pressed = msg.data.right_control.press_level;
-        libnow_sendMessage(DST_ROBOT, &lib_msg);
+
+        if (should_send_control_message(has_last_sent ? &last_sent : NULL, &lib_msg)) {
+            libnow_sendMessage(DST_ROBOT, &lib_msg);
+            last_sent     = lib_msg;
+            has_last_sent = true;
+        }
 
         // Keep only the latest sample so display is always up to date.
         // BaseType_t ret = xQueueOverwrite(g_sensor_queue, &msg);

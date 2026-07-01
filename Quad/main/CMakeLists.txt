@@ -56,7 +56,11 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/.env")
 	endif()
 endif()
 
-FILE(GLOB_RECURSE app_sources ${CMAKE_CURRENT_SOURCE_DIR}/*.c)
+set(app_sources
+	main.c
+	display.c
+	servomotor.c
+)
 
 # Generate config header with WiFi credentials
 set(CONFIG_HEADER_PATH "${CMAKE_BINARY_DIR}/wifi_config_gen.h")
